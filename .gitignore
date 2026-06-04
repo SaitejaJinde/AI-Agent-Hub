@@ -1,0 +1,3 @@
+# Ignore backend env and venv
+backend/.env
+backend/venv/

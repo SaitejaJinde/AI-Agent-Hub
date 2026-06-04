@@ -14,7 +14,7 @@ llm = get_llm()
 
 class AgentState(TypedDict):
     message: str
-    tool: str
+    tools: list[str]
     response: str
 
 
@@ -25,129 +25,101 @@ def router_node(state: AgentState):
         state["message"]
     )
 
-    tool = tools[0]
+    print("Selected Tools:", tools)
 
     return {
-        "tool": tool
+        "tools": tools
     }
 
 
-# Chat Node
-def chat_node(state: AgentState):
+# Multi Tool Executor
+def multi_tool_node(state: AgentState):
 
-    response = llm.invoke(
-        state["message"]
-    )
+    responses = []
+
+    tools = state["tools"]
+
+    # Calculator
+    if "calculator" in tools:
+
+        result = calculator(
+            state["message"]
+        )
+
+        responses.append(
+            f"🧮 CALCULATOR\n\n{result}"
+        )
+
+    # Search
+    if "search" in tools:
+
+        result = search(
+            state["message"]
+        )
+
+        responses.append(
+            f"🔎 SEARCH RESULTS\n\n{result}"
+        )
+
+    # Trip Planner
+    if "trip" in tools:
+
+        prompt = build_trip_prompt(
+            state["message"]
+        )
+
+        result = llm.invoke(
+            prompt
+        )
+
+        responses.append(
+            f"🧳 TRIP PLAN\n\n{result.content}"
+        )
+
+    # Chat
+    if "chat" in tools:
+
+        result = llm.invoke(
+            state["message"]
+        )
+
+        responses.append(
+            result.content
+        )
 
     return {
-        "response": response.content
+        "response": "\n\n".join(
+            responses
+        )
     }
 
 
-# Calculator Node
-def calculator_node(state: AgentState):
+# Build Graph
+graph = StateGraph(
+    AgentState
+)
 
-    result = calculator(
-        state["message"]
-    )
-
-    return {
-        "response": str(result)
-    }
-
-
-# Search Node
-def search_node(state: AgentState):
-
-    result = search(
-        state["message"]
-    )
-
-    return {
-        "response": result
-    }
-
-
-# Trip Planner Node
-def trip_node(state: AgentState):
-
-    prompt = build_trip_prompt(
-        state["message"]
-    )
-
-    response = llm.invoke(prompt)
-
-    return {
-        "response": response.content
-    }
-
-
-# Routing Logic
-def route_tool(state: AgentState):
-
-    return state["tool"]
-
-
-graph = StateGraph(AgentState)
-
-# Nodes
 graph.add_node(
     "router",
     router_node
 )
 
 graph.add_node(
-    "chat",
-    chat_node
+    "executor",
+    multi_tool_node
 )
 
-graph.add_node(
-    "calculator",
-    calculator_node
-)
-
-graph.add_node(
-    "search",
-    search_node
-)
-
-graph.add_node(
-    "trip",
-    trip_node
-)
-
-# Entry Point
 graph.set_entry_point(
     "router"
 )
 
-# Conditional Routing
-graph.add_conditional_edges(
+graph.add_edge(
     "router",
-    route_tool,
-    {
-        "calculator": "calculator",
-        "search": "search",
-        "trip": "trip",
-        "chat": "chat",
-    },
-)
-
-# Finish Points
-graph.set_finish_point(
-    "calculator"
+    "executor"
 )
 
 graph.set_finish_point(
-    "search"
-)
-
-graph.set_finish_point(
-    "trip"
-)
-
-graph.set_finish_point(
-    "chat"
+    "executor"
 )
 
 app = graph.compile()

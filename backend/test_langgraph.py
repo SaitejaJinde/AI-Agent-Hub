@@ -2,8 +2,9 @@ from langgraph_agent import app
 
 result = app.invoke(
     {
-        "message": "245 * 67"
+        "message":
+        "Plan a Goa trip and give me latest travel news"
     }
 )
 
-print(result)
+print(result["response"])

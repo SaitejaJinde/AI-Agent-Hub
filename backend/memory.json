@@ -1,0 +1,34 @@
+[
+  {
+    "role": "user",
+    "content": "My name is Teja"
+  },
+  {
+    "role": "assistant",
+    "content": "Nice to meet you, Teja! How can I help you today?"
+  },
+  {
+    "role": "user",
+    "content": "what is my NAME"
+  },
+  {
+    "role": "assistant",
+    "content": "Your name is Teja."
+  },
+  {
+    "role": "user",
+    "content": "SAVE MY NAME AS JINDE"
+  },
+  {
+    "role": "assistant",
+    "content": "Okay, I've updated your name. From now on, I'll call you Jinde."
+  },
+  {
+    "role": "user",
+    "content": "whats my name "
+  },
+  {
+    "role": "assistant",
+    "content": "Your name is Jinde."
+  }
+]

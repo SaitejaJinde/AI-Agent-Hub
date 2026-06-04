@@ -9,7 +9,14 @@ from tools.calculator import calculator
 from tools.search import search
 from tools.trip_planner import build_trip_prompt
 
+from memory import (
+    load_memory,
+    save_memory
+)
+
 llm = get_llm()
+
+conversation_history = load_memory()
 
 
 class AgentState(TypedDict):
@@ -34,6 +41,8 @@ def router_node(state: AgentState):
 
 # Multi Tool Executor
 def multi_tool_node(state: AgentState):
+
+    global conversation_history
 
     responses = []
 
@@ -76,11 +85,39 @@ def multi_tool_node(state: AgentState):
             f"🧳 TRIP PLAN\n\n{result.content}"
         )
 
-    # Chat
+    # Chat + Persistent Memory
     if "chat" in tools:
 
+        conversation_history.append({
+            "role": "user",
+            "content": state["message"]
+        })
+
+        prompt = """
+You are a helpful AI assistant.
+
+Use the conversation history below.
+
+"""
+
+        for msg in conversation_history:
+
+            prompt += (
+                f"{msg['role']}: "
+                f"{msg['content']}\n"
+            )
+
         result = llm.invoke(
-            state["message"]
+            prompt
+        )
+
+        conversation_history.append({
+            "role": "assistant",
+            "content": result.content
+        })
+
+        save_memory(
+            conversation_history
         )
 
         responses.append(

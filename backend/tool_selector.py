@@ -2,25 +2,42 @@ from llm_client import get_llm
 
 llm = get_llm()
 
-def select_tool(message: str):
+
+def select_tools(message: str):
 
     prompt = f"""
 You are an AI router.
 
-Choose ONLY one of these tool names:
+Available tools:
 
 calculator
 search
-weather
 trip
 chat
 
+A message may require multiple tools.
+
+Examples:
+
+Plan a Goa trip -> trip
+
+Latest AI news -> search
+
+Plan a Goa trip and latest travel news -> trip,search
+
+245 * 67 -> calculator
+
+Hello -> chat
+
+Return ONLY comma-separated tool names.
+
 Message:
 {message}
-
-Return ONLY the tool name.
 """
 
     response = llm.invoke(prompt)
 
-    return response.content.strip().lower()
+    return [
+        tool.strip().lower()
+        for tool in response.content.split(",")
+    ]

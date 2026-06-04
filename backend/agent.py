@@ -1,7 +1,8 @@
-from tool_selector import select_tool
+import re
+
+from tool_selector import select_tools
 from tools.calculator import calculator
 from tools.search import search
-from tools.weather import weather
 from tools.trip_planner import build_trip_prompt
 from llm_client import get_llm
 
@@ -14,44 +15,62 @@ def chat(message: str):
     global conversation_history
 
     try:
-        intent = select_tool(message)
-
-        print(f"Selected Tool: {intent}")
-
-        # Calculator Tool
-        if intent == "calculator":
+        # Fast calculator detection
+        if re.search(r"\d+\s*[\+\-\*/]\s*\d+", message):
             result = calculator(message)
 
             if result is not None:
                 return result
 
-        # Search Tool
-        if intent == "search":
-            return search(message)
+        tools = select_tools(message)
 
-        # Weather Tool
-        if intent == "weather":
-            return weather(message)
+        print("Selected Tools:", tools)
 
-        # Trip Planner Tool
-        if intent == "trip":
+        responses = []
+
+        # Trip Planner
+        if "trip" in tools:
             prompt = build_trip_prompt(message)
 
-            response = llm.invoke(prompt)
+            trip_response = llm.invoke(prompt)
 
-            return getattr(
-                response,
-                "content",
-                str(response)
+            responses.append(
+                f"🧳 TRIP PLAN\n\n{trip_response.content}"
             )
 
-        # Default Chat
+        # Search
+        if "search" in tools:
+            search_response = search(message)
+
+            responses.append(
+                f"🔎 SEARCH RESULTS\n\n{search_response}"
+            )
+
+        # Calculator
+        if "calculator" in tools:
+            result = calculator(message)
+
+            if result is not None:
+                responses.append(
+                    f"🧮 CALCULATION\n\n{result}"
+                )
+
+        # Return combined tool results
+        if responses:
+            return "\n\n".join(responses)
+
+        # Default Chat Memory
         conversation_history.append({
             "role": "user",
             "content": message
         })
 
-        prompt = ""
+        prompt = """
+You are a helpful AI assistant.
+
+Use the conversation history below to answer.
+
+"""
 
         for msg in conversation_history:
             prompt += (
@@ -75,4 +94,5 @@ def chat(message: str):
         return ai_response
 
     except Exception as e:
+        print("AGENT ERROR:", e)
         return f"Agent Error: {e}"

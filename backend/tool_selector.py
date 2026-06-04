@@ -13,21 +13,45 @@ Available tools:
 calculator
 search
 trip
+filesystem
 chat
 
 A message may require multiple tools.
 
 Examples:
 
-Plan a Goa trip -> trip
+245 * 67
+-> calculator
 
-Latest AI news -> search
+Latest AI news
+-> search
 
-Plan a Goa trip and latest travel news -> trip,search
+Plan a Goa trip
+-> trip
 
-245 * 67 -> calculator
+Plan a Goa trip and latest travel news
+-> trip,search
 
-Hello -> chat
+List files in backend
+-> filesystem
+
+Show project files
+-> filesystem
+
+Read memory.py
+-> filesystem
+
+Open agent.py
+-> filesystem
+
+What is my name?
+-> chat
+
+My name is Teja
+-> chat
+
+Hello
+-> chat
 
 Return ONLY comma-separated tool names.
 
@@ -37,7 +61,11 @@ Message:
 
     response = llm.invoke(prompt)
 
-    return [
+    tools = [
         tool.strip().lower()
         for tool in response.content.split(",")
     ]
+
+    print("Router selected:", tools)
+
+    return tools

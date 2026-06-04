@@ -8,6 +8,10 @@ from tool_selector import select_tools
 from tools.calculator import calculator
 from tools.search import search
 from tools.trip_planner import build_trip_prompt
+from tools.filesystem import (
+    list_files,
+    read_file
+)
 
 from memory import (
     load_memory,
@@ -85,6 +89,49 @@ def multi_tool_node(state: AgentState):
             f"🧳 TRIP PLAN\n\n{result.content}"
         )
 
+    # Filesystem
+    if "filesystem" in tools:
+
+        message = state["message"].lower()
+
+        if (
+            "read" in message
+            or "open" in message
+            or ".py" in message
+        ):
+
+            file_name = None
+
+            for word in state["message"].split():
+
+                if (
+                    word.endswith(".py")
+                    or word.endswith(".json")
+                    or word.endswith(".txt")
+                ):
+                    file_name = word
+                    break
+
+            if file_name:
+
+                result = read_file(
+                    file_name
+                )
+
+            else:
+
+                result = (
+                    "Please specify a file name."
+                )
+
+        else:
+
+            result = list_files()
+
+        responses.append(
+            f"📁 FILESYSTEM\n\n{result}"
+        )
+
     # Chat + Persistent Memory
     if "chat" in tools:
 
@@ -97,7 +144,6 @@ def multi_tool_node(state: AgentState):
 You are a helpful AI assistant.
 
 Use the conversation history below.
-
 """
 
         for msg in conversation_history:

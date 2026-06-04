@@ -1,27 +1,20 @@
 import { useState, useRef, useEffect } from "react";
+
 function App() {
   const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<
-    { role: string; text: string }[]
-  >(() => {
+  const [messages, setMessages] = useState<{ role: string; text: string }[]>(() => {
     const saved = localStorage.getItem("chat");
-
     return saved ? JSON.parse(saved) : [];
   });
   const [loading, setLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-    });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
 
   useEffect(() => {
-    localStorage.setItem(
-      "chat",
-      JSON.stringify(messages)
-    );
+    localStorage.setItem("chat", JSON.stringify(messages));
   }, [messages]);
 
   const newChat = () => {
@@ -35,12 +28,14 @@ function App() {
 
     const currentMessage = message;
 
-    const userMessage = {
-      role: "user",
-      text: currentMessage,
-    };
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "user",
+        text: currentMessage,
+      },
+    ]);
 
-    setMessages((prev) => [...prev, userMessage]);
     setMessage("");
     setLoading(true);
 
@@ -50,20 +45,19 @@ function App() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          message: currentMessage,
-        }),
+        body: JSON.stringify({ message: currentMessage }),
       });
 
       const data = await res.json();
 
-      const aiMessage = {
-        role: "ai",
-        text: data.response,
-      };
-
-      setMessages((prev) => [...prev, aiMessage]);
-    } catch (error) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          role: "ai",
+          text: data.response,
+        },
+      ]);
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
@@ -79,146 +73,183 @@ function App() {
   return (
     <div
       style={{
-        maxWidth: "1000px",
-        margin: "0 auto",
-        padding: "20px",
-        fontFamily: "Arial, sans-serif",
+        height: "100vh",
+        background: "#000",
+        color: "#00ff6a",
         display: "flex",
-        gap: "20px",
+        justifyContent: "center",
+        alignItems: "center",
+        padding: "20px",
+        fontFamily: "-apple-system, BlinkMacSystemFont, sans-serif",
       }}
     >
-      {/* Sidebar */}
       <div
         style={{
-          width: "250px",
-          padding: "20px",
-          borderRadius: "12px",
-          backgroundColor: "#f7f7f7",
-          border: "1px solid #ddd",
+          width: "100%",
+          maxWidth: "1400px",
+          height: "92vh",
+          background: "rgba(0,0,0,0.85)",
+          borderRadius: "32px",
+          overflow: "hidden",
+          boxShadow: "0 20px 60px rgba(0,255,106,0.15)",
           display: "flex",
-          flexDirection: "column",
-          gap: "20px",
         }}
       >
-        <div style={{ fontSize: "24px", fontWeight: "700" }}>
-          🤖 AI Agent Hub
-        </div>
-        <button
-          onClick={newChat}
-          style={{
-            padding: "12px 16px",
-            borderRadius: "8px",
-            border: "none",
-            backgroundColor: "#2563eb",
-            color: "white",
-            cursor: "pointer",
-          }}
-        >
-          + New Chat
-        </button>
-      </div>
-
-      {/* Main Chat */}
-      <div style={{ flex: 1 }}>
         <div
           style={{
-            minHeight: "500px",
-            border: "1px solid #ddd",
-            borderRadius: "12px",
-            backgroundColor: "#fafafa",
-            padding: "20px",
-            marginBottom: "20px",
-            overflowY: "auto",
+            width: "280px",
+            padding: "24px",
+            borderRight: "1px solid rgba(0,255,106,0.15)",
+            background: "rgba(0,0,0,0.9)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "20px",
           }}
         >
-          {messages.map((msg, index) => (
-            <div
-              key={index}
+          <div>
+            <h1
               style={{
-                display: "flex",
-                justifyContent:
-                  msg.role === "user"
-                    ? "flex-end"
-                    : "flex-start",
-                marginBottom: "15px",
+                margin: 0,
+                fontSize: "28px",
+                fontWeight: 700,
+                color: "#00ff6a",
               }}
             >
+              AI Agent Hub
+            </h1>
+            <p
+              style={{
+                color: "#9cff9e",
+              }}
+            >
+              Gemini • LangGraph
+            </p>
+          </div>
+
+          <button
+            onClick={newChat}
+            style={{
+              padding: "14px",
+              borderRadius: "16px",
+              border: "none",
+              background: "#00ff6a",
+              color: "#000",
+              cursor: "pointer",
+              fontWeight: 600,
+            }}
+          >
+            + New Chat
+          </button>
+        </div>
+
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            background: "rgba(0,0,0,0.45)",
+            backdropFilter: "blur(20px)",
+            borderLeft: "1px solid rgba(0,255,106,0.15)",
+          }}
+        >
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: "30px",
+            }}
+          >
+            {messages.map((msg, index) => (
               <div
+                key={index}
                 style={{
-                  maxWidth: "70%",
-                  padding: "12px",
-                  borderRadius: "12px",
-                  backgroundColor:
-                    msg.role === "user"
-                      ? "#2563eb"
-                      : "#e5e7eb",
-                  color:
-                    msg.role === "user"
-                      ? "white"
-                      : "black",
-                  whiteSpace: "pre-wrap",
+                  display: "flex",
+                  justifyContent: msg.role === "user" ? "flex-end" : "flex-start",
+                  marginBottom: "16px",
                 }}
               >
-                {msg.text}
+                <div
+                  style={{
+                    maxWidth: "70%",
+                    padding: "14px 18px",
+                    borderRadius: "24px",
+                    whiteSpace: "pre-wrap",
+                    background: msg.role === "user" ? "rgba(0,255,106,0.15)" : "rgba(255,255,255,0.08)",
+                    color: msg.role === "user" ? "#b8ffb7" : "#e5ffdb",
+                    border: msg.role === "user" ? "1px solid rgba(0,255,106,0.4)" : "1px solid rgba(255,255,255,0.12)",
+                    boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  {msg.text}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
 
-          {loading && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-start",
-                marginBottom: "15px",
-              }}
-            >
+            {loading && (
               <div
                 style={{
-                  backgroundColor: "#e5e7eb",
-                  padding: "12px",
-                  borderRadius: "12px",
+                  padding: "14px 18px",
+                  background: "rgba(255,255,255,0.08)",
+                  borderRadius: "24px",
+                  width: "fit-content",
+                  color: "#b8ffb7",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  boxShadow: "0 8px 30px rgba(0,0,0,0.12)",
                 }}
               >
                 Thinking...
               </div>
-            </div>
-          )}
+            )}
 
-          <div ref={messagesEndRef} />
-        </div>
+            <div ref={messagesEndRef} />
+          </div>
 
-        <div style={{ display: "flex", gap: "10px" }}>
-          <input
+          <div
             style={{
-              flex: 1,
-              padding: "12px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-            }}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                sendMessage();
-              }
-            }}
-            placeholder="Ask anything..."
-          />
-
-          <button
-            disabled={loading}
-            onClick={sendMessage}
-            style={{
-              padding: "12px 24px",
-              borderRadius: "8px",
-              border: "none",
-              backgroundColor: "#2563eb",
-              color: "white",
-              cursor: "pointer",
+              padding: "20px",
+              borderTop: "1px solid rgba(0,255,106,0.15)",
+              display: "flex",
+              gap: "12px",
             }}
           >
-            {loading ? "Thinking..." : "Send"}
-          </button>
+            <input
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  sendMessage();
+                }
+              }}
+              placeholder="Ask anything..."
+              style={{
+                flex: 1,
+                padding: "16px",
+                borderRadius: "18px",
+                border: "1px solid rgba(0,255,106,0.3)",
+                outline: "none",
+                background: "rgba(0,0,0,0.7)",
+                color: "#b8ffb7",
+                fontSize: "16px",
+              }}
+            />
+
+            <button
+              disabled={loading}
+              onClick={sendMessage}
+              style={{
+                width: "60px",
+                height: "60px",
+                borderRadius: "50%",
+                border: "none",
+                background: "#00ff6a",
+                color: "#000",
+                cursor: "pointer",
+                fontSize: "18px",
+              }}
+            >
+              {loading ? "..." : "➜"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

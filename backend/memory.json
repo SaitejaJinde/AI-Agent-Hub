@@ -30,5 +30,21 @@
   {
     "role": "assistant",
     "content": "Your name is Jinde."
+  },
+  {
+    "role": "user",
+    "content": "hey"
+  },
+  {
+    "role": "assistant",
+    "content": "Hey Jinde! How can I help you?"
+  },
+  {
+    "role": "user",
+    "content": "how are you "
+  },
+  {
+    "role": "assistant",
+    "content": "I'm doing well, Jinde! Thanks for asking. How about you?"
   }
 ]

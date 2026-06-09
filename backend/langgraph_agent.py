@@ -1,4 +1,5 @@
 from typing import TypedDict
+import asyncio
 
 from langgraph.graph import StateGraph
 
@@ -8,9 +9,10 @@ from tool_selector import select_tools
 from tools.calculator import calculator
 from tools.search import search
 from tools.trip_planner import build_trip_prompt
-from tools.filesystem import (
-    list_files,
-    read_file
+
+from tools.mcp_filesystem import (
+    list_directory,
+    read_mcp_file
 )
 
 from memory import (
@@ -89,7 +91,7 @@ def multi_tool_node(state: AgentState):
             f"🧳 TRIP PLAN\n\n{result.content}"
         )
 
-    # Filesystem
+    # MCP Filesystem
     if "filesystem" in tools:
 
         message = state["message"].lower()
@@ -98,6 +100,8 @@ def multi_tool_node(state: AgentState):
             "read" in message
             or "open" in message
             or ".py" in message
+            or ".json" in message
+            or ".txt" in message
         ):
 
             file_name = None
@@ -114,8 +118,10 @@ def multi_tool_node(state: AgentState):
 
             if file_name:
 
-                result = read_file(
-                    file_name
+                result = asyncio.run(
+                    read_mcp_file(
+                        file_name
+                    )
                 )
 
             else:
@@ -126,10 +132,12 @@ def multi_tool_node(state: AgentState):
 
         else:
 
-            result = list_files()
+            result = asyncio.run(
+                list_directory(".")
+            )
 
         responses.append(
-            f"📁 FILESYSTEM\n\n{result}"
+            f"📁 MCP FILESYSTEM\n\n{result}"
         )
 
     # Chat + Persistent Memory

@@ -1,6 +1,9 @@
-# Minimal requirements for the backend. Add or pin versions as needed.
 fastapi
-pydantic
-python-dotenv
 uvicorn
+python-dotenv
 langgraph
+langchain-google-genai
+pytest
+httpx
+requests
+pytest-asyncio

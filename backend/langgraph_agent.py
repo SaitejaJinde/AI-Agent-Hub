@@ -1,21 +1,23 @@
 from typing import TypedDict
 import asyncio
+import threading
+import inspect
 
-from langgraph.graph import StateGraph
+from .langgraph.graph import StateGraph
 
-from llm_client import get_llm
-from tool_selector import select_tools
+from .llm_client import get_llm
+from .tool_selector import select_tools
 
-from tools.calculator import calculator
-from tools.search import search
-from tools.trip_planner import build_trip_prompt
+from .tools.calculator import calculator
+from .tools.search import search
+from .tools.trip_planner import build_trip_prompt
 
-from tools.mcp_filesystem import (
+from .tools.mcp_filesystem import (
     list_directory,
     read_mcp_file
 )
 
-from memory import (
+from .memory import (
     load_memory,
     save_memory
 )
@@ -29,6 +31,59 @@ class AgentState(TypedDict):
     message: str
     tools: list[str]
     response: str
+
+
+# Helper to run coroutines from synchronous code even if an event loop is running
+def run_coro_sync(coro):
+    """Run a coroutine from sync code. If there's no running loop, use asyncio.run.
+    If there is a running loop, run the coroutine in a new thread with its own loop.
+    """
+    if not inspect.isawaitable(coro):
+        return coro
+
+    try:
+        # If there's no running loop, this will raise RuntimeError
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(coro)
+    else:
+        result = {}
+
+        def _run():
+            new_loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(new_loop)
+            try:
+                result['value'] = new_loop.run_until_complete(coro)
+            finally:
+                new_loop.close()
+
+        t = threading.Thread(target=_run)
+        t.start()
+        t.join()
+        return result.get('value')
+
+
+# Safe invoke helper for LLM/tool that may return either a plain string, an object with .content,
+# or a coroutine that resolves to one of those.
+def safe_invoke(func_or_obj, *args, **kwargs):
+    # func_or_obj can be a callable (like llm.invoke) or an object with invoke method
+    if hasattr(func_or_obj, "invoke") and callable(func_or_obj.invoke):
+        res = func_or_obj.invoke(*args, **kwargs)
+    elif callable(func_or_obj):
+        res = func_or_obj(*args, **kwargs)
+    else:
+        # Not callable; return string representation
+        return str(func_or_obj)
+
+    # If the result is awaitable, run it synchronously
+    if inspect.isawaitable(res):
+        res = run_coro_sync(res)
+
+    # If the result is an object with .content, prefer that
+    if hasattr(res, "content"):
+        return getattr(res, "content")
+
+    return res
 
 
 # Router Node
@@ -83,12 +138,11 @@ def multi_tool_node(state: AgentState):
             state["message"]
         )
 
-        result = llm.invoke(
-            prompt
-        )
+        # Use safe_invoke to handle sync/async and .content shapes
+        result = safe_invoke(llm, prompt)
 
         responses.append(
-            f"🧳 TRIP PLAN\n\n{result.content}"
+            f"🧳 TRIP PLAN\n\n{result}"
         )
 
     # MCP Filesystem
@@ -108,21 +162,20 @@ def multi_tool_node(state: AgentState):
 
             for word in state["message"].split():
 
+                cleaned = word.strip().strip('"\'.,;:()[]')
+
                 if (
-                    word.endswith(".py")
-                    or word.endswith(".json")
-                    or word.endswith(".txt")
+                    cleaned.endswith(".py")
+                    or cleaned.endswith(".json")
+                    or cleaned.endswith(".txt")
                 ):
-                    file_name = word
+                    file_name = cleaned
                     break
 
             if file_name:
 
-                result = asyncio.run(
-                    read_mcp_file(
-                        file_name
-                    )
-                )
+                # read_mcp_file may be async; run safely
+                result = run_coro_sync(read_mcp_file(file_name))
 
             else:
 
@@ -132,9 +185,7 @@ def multi_tool_node(state: AgentState):
 
         else:
 
-            result = asyncio.run(
-                list_directory(".")
-            )
+            result = run_coro_sync(list_directory("."))
 
         responses.append(
             f"📁 MCP FILESYSTEM\n\n{result}"
@@ -161,13 +212,12 @@ Use the conversation history below.
                 f"{msg['content']}\n"
             )
 
-        result = llm.invoke(
-            prompt
-        )
+        result = safe_invoke(llm, prompt)
 
+        # Ensure we store a string in memory
         conversation_history.append({
             "role": "assistant",
-            "content": result.content
+            "content": str(result)
         })
 
         save_memory(
@@ -175,7 +225,7 @@ Use the conversation history below.
         )
 
         responses.append(
-            result.content
+            str(result)
         )
 
     return {

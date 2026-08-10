@@ -4,9 +4,11 @@ from dotenv import load_dotenv
 from fastapi.middleware.cors import CORSMiddleware
 import traceback
 
+import os
+
 load_dotenv()
 
-from agent import chat
+from .agent import chat
 
 app = FastAPI()
 
